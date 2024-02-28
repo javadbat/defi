@@ -1,4 +1,6 @@
 import Web3 from "web3";
+
+
 type swapParams = {
     src: string, // Token address of fantom
     dst: string, // Token address of RIP(Fantom Doge)
@@ -15,12 +17,13 @@ export class OneInchHelper {
     chainId = 250;
     web3RpcUrl = "https://rpc.ftm.tools";// rpc url of fantom
     walletAddress = "0xDB5058aC383570b5c4D38f40DD4653473bb9803b"; // Your wallet address
-    privateKey = "f3e91592be42d0def0e8b58437182cd5d48ce7a8ebc45093936a021d102fd0fe"; // Your wallet's private key. NEVER SHARE THIS WITH ANYONE!
+    privateKey = "12345"; // Your wallet's private key. NEVER SHARE THIS WITH ANYONE!
     //
     broadcastApiUrl = "https://api.1inch.dev/tx-gateway/v1.1/" + this.chainId + "/broadcast";
     apiBaseUrl = "https://api.1inch.dev/swap/v5.2/" + this.chainId;
     web3 = new Web3(this.web3RpcUrl);
-    headers = { headers: { Authorization: "Bearer Vncokq93atdcSGlOtx6BdMa8gp3DbTr2", accept: "application/json" } };
+    token = "Bearer Vncokq93atdcSGlOtx6BdMa8gp3DbTr2"
+    headers = { headers: { Authorization: this.token, accept: "application/json" } };
     swapParams:swapParams;
     constructor() {
         this.swapParams = {
@@ -112,4 +115,43 @@ export class OneInchHelper {
           .then((res) => res.json())
           .then((res) => res.allowance);
     }
+    async getQuote(){
+        return new Promise((resolve, reject) => { 
+            let endpoint = `https://api.1inch.dev/swap/v5.2/${this.chainId}/quote`;
+            const quoteParams = {
+                src: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", // Token address of fantom
+                dst: "0x1d43697d67cb5d0436cc38d583ca473a1bfebc7a", // Token address of RIP(Fantom Doge)
+                amount: "10000000000000000", // Amount of ftm to swap (in wei) = 1FTM see:https://ftmscan.com/unitconverter
+                includeTokensInfo:true,
+                includeProtocols:true,
+                includeGas:true,
+            };
+            //@ts-ignore
+            endpoint += '?' + new URLSearchParams(quoteParams)
+            fetch(endpoint, {
+                method: "get",
+                headers: this.headers.headers
+            })
+                .then((res) => res.json())
+                .then((res) => {
+                    resolve(res) ;
+                });
+         })
+        }
+        getSpenderAddress(){
+            return new Promise((resolve, reject) => { 
+            //     fetch('https://api.1inch.dev/swap/v5.2/1/approve/spender', {
+            //         method: "get",
+            //         headers: this.headers.headers
+            //     })
+            //         .then((res) => res.json())
+            //         .then((res) => {
+            //             resolve(res) ;
+            //         }).catch((err)=>{
+            //             console.error(err);
+            //         })
+            //i called it once and get this. dont call it due to api call limit
+            resolve({address:'0x1111111254eeb25477b68fb85ed929f73a960582'})
+             })
+        }
 }

@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { useSDK } from '@metamask/sdk-react';
-
 function MetaMask() {
     const [account, setAccount] = useState<string>();
   const { sdk, connected, connecting, provider, chainId,error,status } = useSDK();

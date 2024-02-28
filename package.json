@@ -9,11 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@metamask/sdk": "^0.15.0",
     "@metamask/sdk-react": "^0.14.1",
     "@metamask/sdk-react-ui": "^0.14.2",
+    "ethers": "^6.11.1",
     "next": "14.0.4",
     "react": "^18",
     "react-dom": "^18",
+    "viem": "^2.7.15",
     "web3": "^4.5.0"
   },
   "devDependencies": {

@@ -164,7 +164,7 @@ export class OneInchHelper {
                 dst: dstToken,
                 amount: amount,
                 from: from,
-                slippage: "1",
+                slippage: "50",
                 includeProtocols: "true",
                 includeTokensInfo: "true",
                 disableEstimate: "true",

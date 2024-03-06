@@ -1,5 +1,5 @@
 import { OneInchHelper } from '@/app/components/inch/1inch-helper';
-import { createSwapContract } from '@/app/components/metamask/meta-mask-helper';
+import { createSwapContract,createCalcGasContract } from '@/app/components/metamask/meta-mask-helper';
 import React, { useCallback, useEffect } from 'react'
 const helper = new OneInchHelper();
 function Index() {
@@ -7,8 +7,9 @@ function Index() {
         // helper.getQuote().then((quote)=>{
         //     console.log(quote);
             createSwapContract();
+
         //});
-        
+        // createCalcGasContract();
     },[])
   return (
     <div>

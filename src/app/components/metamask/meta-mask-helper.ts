@@ -6,6 +6,8 @@ import { MetaMaskSDK } from "@metamask/sdk";
 import { createWalletClient, custom, createPublicClient, http, publicActions, getContract } from 'viem'
 import { fantom } from 'viem/chains'
 import { parseUnits } from 'viem'
+import { read } from "fs";
+import { ethers } from "ethers";
 
 const recipient = '0xRecipientAddress'; // Replace with recipient's address
 const amount = '1000000000000000000'; // 1 ETH in wei
@@ -19,30 +21,19 @@ const sv = '0'; // spend base on input mean convert input amount to maximum outp
 export async function createSwapContract() {
     const oneInchHelper = new OneInchHelper();
     //@ts-ignore
-    const spender: { address: `0x${string}` } = await oneInchHelper.getSpenderAddress();
-    const spenderAddress: `0x${string}` = spender.address;
     if (window.ethereum) {
+        const myWalletAddress = "0xDB5058aC383570b5c4D38f40DD4653473bb9803b"
+        const spender: { address: `0x${string}` } = await oneInchHelper.getSpenderAddress();
+        const spenderAddress: `0x${string}` = spender.address;
         const contractAddress = spenderAddress;
-        const abi = oneInchSwapABI;
-        // const provider = createMetaMaskProvider();
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-        if (!Array.isArray(accounts) || !(typeof accounts[0] == "string")) {
+        const contract = await createFantomContract(contractAddress);
+        const oneInchData = await oneInchHelper.generateCallDataForSwap(srcTokenAddress,dstTokenAddress,inputAmount,myWalletAddress);
+        if (contract === undefined || !oneInchData ) {
             return;
         }
-        const account = accounts[0] as `0x${string}`;
-        const client = createWalletClient({
-            account,
-            chain: fantom,
-            transport: custom(window.ethereum)
-        }).extend(publicActions);
-        const contract = getContract({
-            abi,
-            address: contractAddress as `0x${string}`,
-            client
-        })
         const swapAmount = BigInt(inputAmount);
         debugger;
-        // what i first found for aggregreator address for fantom
+        // what i first found for aggregator address for fantom
         // "0x8b01d28F4fDDD89322711d832325f7eB1f122FB2" is used in all swap function call in scanners so i changed it to it
         const firstTest = '0x1111111254EEB25477B68fb85Ed929f73A960582'
         contract.write.swap([
@@ -52,16 +43,16 @@ export async function createSwapContract() {
                 srcToken: srcTokenAddress,
                 dstToken: dstTokenAddress,
                 srcReceiver: "0x8b01d28F4fDDD89322711d832325f7eB1f122FB2",
-                dstReceiver: spenderAddress,
-                amount:swapAmount,
+                dstReceiver: myWalletAddress,
+                amount: swapAmount,
                 //@ts-ignore
-                minReturnAmount: 0n,
+                minReturnAmount: BigInt(100),
                 //@ts-ignore
                 flags: BigInt(0),
             },
             "0x",
             // i see all contract send this data for swap as data arg
-            "0x00000000000000000000000000000000000000000000000000006800001a406121be370d5312f44cb42ce377bc9b8a0cef1a4c83d0e30db080206c4eca2721be370d5312f44cb42ce377bc9b8a0cef1a4c831111111254eeb25477b68fb85ed929f73a9605820000000000000000000000000000000000000000000000004563918244f40000"
+            oneInchData
         ])
             .then((res) => {
                 console.log(res);
@@ -91,25 +82,81 @@ export async function createSwapContract() {
 //         const tokenContractReadonly = new ethers.Contract(contractAddress, [abi], provider);
 //         const tokenContract = tokenContractReadonly.connect(signer);
 //         debugger;
-//         // tokenContract.methods.clipperSwap(
-//         //     clipperExchangeAddress,
-//         //     srcTokenAddress,
-//         //     dstTokenAddress,
-//         //     inputAmount,
-//         //     outputAmount,
-//         //     goodUntilTimestamp,
-//         //     r,
-//         //     vs
-//         //   )
+//         tokenContract.methods.clipperSwap(
+//             clipperExchangeAddress,
+//             srcTokenAddress,
+//             dstTokenAddress,
+//             inputAmount,
+//             outputAmount,
+//             goodUntilTimestamp,
+//             r,
+//             vs
+//           )
 //         debugger;
-//         // try {
-//         //     await tokenContract.methods.swap(recipient, amount).send({ from: sender });
-//         //     console.log('Swap transaction successful!');
-//         // } catch (error) {
-//         //     console.error('Error sending swap transaction:', error);
-//         // }
+//         try {
+//             await tokenContract.methods.swap(recipient, amount).send({ from: sender });
+//             console.log('Swap transaction successful!');
+//         } catch (error) {
+//             console.error('Error sending swap transaction:', error);
+//         }
 //     }
 // }
+export async function createCalcGasContract() {
+    const oneInchHelper = new OneInchHelper();
+    const spender: { address: `0x${string}` } = await oneInchHelper.getSpenderAddress();
+    const spenderAddress: `0x${string}` = spender.address;
+    const contractAddress = spenderAddress;
+    const contract = await createFantomContract(contractAddress);
+    if (contract === undefined) {
+        return;
+    }
+    const swapAmount = BigInt(10000000000000000000);
+    const firstTest = '0x1111111254EEB25477B68fb85Ed929f73A960582';
+    const oneInchRouter5Aggregator = "0x8b01d28F4fDDD89322711d832325f7eB1f122FB2";
+    contract.estimateGas.swap([
+        oneInchRouter5Aggregator,
+        {
+            srcToken: srcTokenAddress,
+            dstToken: dstTokenAddress,
+            srcReceiver: oneInchRouter5Aggregator,
+            dstReceiver: spenderAddress,
+            amount: swapAmount,
+            minReturnAmount: BigInt(100),
+            flags: BigInt(0x4),
+        },
+        "0x",
+        // i see all contract send this data for swap as data arg
+        "0x"
+    ],{ value: BigInt("10000000000000000000") } // Send money with the transaction
+        ).then((res) => {
+            console.log(res);
+        }).catch((err) => {
+            console.error(err)
+        })
+
+}
+async function createFantomContract(contractAddress: `0x${string}`) {
+    const abi = oneInchSwapABI;
+    //@ts-ignore
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+    if (!Array.isArray(accounts) || !(typeof accounts[0] == "string")) {
+        return;
+    }
+
+    const account = accounts[0] as `0x${string}`;
+    const client = createWalletClient({
+        account,
+        chain: fantom,
+        //@ts-ignore
+        transport: custom(window.ethereum)
+    }).extend(publicActions);
+    const contract = getContract({
+        abi,
+        address: contractAddress,
+        client
+    })
+    return contract
+}
 function createWeb3() {
     const web3RpcUrl = "https://rpc.ftm.tools";// rpc url of fantom
     const web3 = new Web3(web3RpcUrl);

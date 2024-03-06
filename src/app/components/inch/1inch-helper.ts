@@ -1,3 +1,4 @@
+import { resolve } from "path";
 import Web3 from "web3";
 
 
@@ -24,7 +25,7 @@ export class OneInchHelper {
     web3 = new Web3(this.web3RpcUrl);
     token = "Bearer Vncokq93atdcSGlOtx6BdMa8gp3DbTr2"
     headers = { headers: { Authorization: this.token, accept: "application/json" } };
-    swapParams:swapParams;
+    swapParams: swapParams;
     constructor() {
         this.swapParams = {
             src: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", // Token address of fantom
@@ -36,30 +37,30 @@ export class OneInchHelper {
             allowPartialFill: false // Set to true to allow partial filling of the swap order
         };
     }
-    doTheJob(){
+    doTheJob() {
         // this.doTheAllowance().then((res)=>{
-             this.doTheSwap();
+        this.doTheSwap();
         // });
         // // this.doTheAllowance().then(() => {
         //     this.checkAllowance().then(console.log)
         // // })
     }
-    async doTheAllowance(){
+    async doTheAllowance() {
         const transactionForSign = await this.createSignForTransactionAllowance();
         const approveTxHash = await this.signAndSendTransaction(transactionForSign);
         console.log("Approve tx hash: ", approveTxHash);
     }
-    async doTheSwap(){
+    async doTheSwap() {
         const swapTransaction = await this.buildTxForSwap();
         const swapTxHash = await this.signAndSendTransaction(swapTransaction);
         console.log("Swap tx hash: ", swapTxHash);
     }
     // Sign and post a transaction, return its hash
-    async signAndSendTransaction(transaction:any) {
+    async signAndSendTransaction(transaction: any) {
         const { rawTransaction } = await this.web3.eth.accounts.signTransaction(transaction, this.privateKey);
         return await this.broadCastRawTransaction(rawTransaction);
     }
-    apiRequestUrl(methodName:string, queryParams:any) {
+    apiRequestUrl(methodName: string, queryParams: any) {
         return this.apiBaseUrl + methodName + "?" + new URLSearchParams(queryParams).toString();
     }
     // Post raw transaction to the API and return transaction hash
@@ -78,7 +79,7 @@ export class OneInchHelper {
     //     const allowance = await checkAllowance(swapParams.src, walletAddress);
     //     console.log("Allowance: ", allowance);
     // }
-    async buildTxForApproveTradeWithRouter(tokenAddress: string, amount?:string) {
+    async buildTxForApproveTradeWithRouter(tokenAddress: string, amount?: string) {
         const url = this.apiRequestUrl("/approve/transaction", amount ? { tokenAddress, amount } : { tokenAddress, amount: 0 });
 
         const transaction = await fetch(url, this.headers).then((res) => res.json());
@@ -102,29 +103,30 @@ export class OneInchHelper {
     //
     async buildTxForSwap() {
         const url = this.apiRequestUrl("/swap", this.swapParams);
-      
+
         // Fetch the swap transaction details from the API
         return fetch(url, this.headers)
-          .then((res) => res.json())
-          .then((res) => res.tx);
-      }
-    async checkAllowance(){
-        const url = this.apiRequestUrl("/approve/allowance", {"tokenAddress": this.swapParams.src, "walletAddress": this.walletAddress})
+            .then((res) => res.json())
+            .then((res) => res.tx);
+    }
+    async checkAllowance() {
+        const url = this.apiRequestUrl("/approve/allowance", { "tokenAddress": this.swapParams.src, "walletAddress": this.walletAddress })
 
         return fetch(url, this.headers)
-          .then((res) => res.json())
-          .then((res) => res.allowance);
+            .then((res) => res.json())
+            .then((res) => res.allowance);
     }
-    async getQuote(){
-        return new Promise((resolve, reject) => { 
+    async getQuote(srcToken = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", dstToken = "0x1d43697d67cb5d0436cc38d583ca473a1bfebc7a", amount = "10000000000000000") {
+        return new Promise((resolve, reject) => {
             let endpoint = `https://api.1inch.dev/swap/v5.2/${this.chainId}/quote`;
             const quoteParams = {
-                src: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", // Token address of fantom
-                dst: "0x1d43697d67cb5d0436cc38d583ca473a1bfebc7a", // Token address of RIP(Fantom Doge)
-                amount: "10000000000000000", // Amount of ftm to swap (in wei) = 1FTM see:https://ftmscan.com/unitconverter
-                includeTokensInfo:true,
-                includeProtocols:true,
-                includeGas:true,
+                src: srcToken, // Token address of fantom
+                dst: dstToken, // Token address of RIP(Fantom Doge)
+                amount: amount, // Amount of ftm to swap (in wei) = 1FTM see:https://ftmscan.com/unitconverter
+                includeTokensInfo: true,
+                includeProtocols: true,
+                includeGas: true,
+                disableEstimate: true,
             };
             //@ts-ignore
             endpoint += '?' + new URLSearchParams(quoteParams)
@@ -134,24 +136,46 @@ export class OneInchHelper {
             })
                 .then((res) => res.json())
                 .then((res) => {
-                    resolve(res) ;
+                    resolve(res);
                 });
-         })
-        }
-        getSpenderAddress(){
-            return new Promise((resolve, reject) => { 
-            //     fetch('https://api.1inch.dev/swap/v5.2/1/approve/spender', {
-            //         method: "get",
-            //         headers: this.headers.headers
-            //     })
-            //         .then((res) => res.json())
-            //         .then((res) => {
-            //             resolve(res) ;
-            //         }).catch((err)=>{
-            //             console.error(err);
-            //         })
+        })
+    }
+    getSpenderAddress(): Promise<{ address: `0x${string}` }> {
+        return new Promise((resolve, reject) => {
+                // fetch('https://api.1inch.dev/swap/v5.2/250/approve/spender', {
+                //     method: "get",
+                //     headers: this.headers.headers
+                // })
+                //     .then((res) => res.json())
+                //     .then((res) => {
+                //         resolve(res) ;
+                //     }).catch((err)=>{
+                //         console.error(err);
+                //     })
             //i called it once and get this. dont call it due to api call limit
-            resolve({address:'0x1111111254eeb25477b68fb85ed929f73a960582'})
-             })
-        }
+            resolve({ address: '0x1111111254eeb25477b68fb85ed929f73a960582' })
+        })
+    }
+    async generateCallDataForSwap(srcToken: string, dstToken: string, amount: string, from: string) {
+        return new Promise<`0x${string}`>((resolve, reject) => {
+            const url = `https://api.1inch.dev/swap/v5.2/${this.chainId}/swap`;
+            const params = {
+                src: srcToken,
+                dst: dstToken,
+                amount: amount,
+                from: from,
+                slippage: "1",
+                includeProtocols: "true",
+                includeTokensInfo: "true",
+                disableEstimate: "true",
+            }
+            const endpoint = url + '?' + new URLSearchParams(params);
+            fetch(endpoint, { headers: this.headers.headers }).then((res) => res.json()).then((res) => {
+                resolve(res.tx.data);
+            }).catch((err) => {
+                debugger;
+                console.log(err);
+            });
+        });
+    }
 }
